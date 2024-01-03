@@ -2,7 +2,6 @@ import os
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import zipfile
-import re
 
 
 def list_epub_files(folder_path):
@@ -29,6 +28,8 @@ def print_book_content(file_path):
 
 
 def split_epub(input_file, split_size):
+    print("вошли в функцию")
+
     # Загрузка файла ePub
     book = epub.read_epub(input_file)
 
@@ -39,81 +40,91 @@ def split_epub(input_file, split_size):
     output_folder = f'{base_name}_split'
     os.makedirs(output_folder, exist_ok=True)
 
+    # Получение списка заголовков глав
+    chapter_titles = print_book_content(input_file)
+    print(f'В книге {len(chapter_titles)} глав.')
+
     # Индекс текущей главы
-    current_chapter = 1
     current_part = 1
+    current_split_size = 0
 
     # Инициализация новой книги
     new_book = epub.EpubBook()
 
-    # Проход по всем элементам книги
-    for item in book.get_items_of_type(epub.EpubHtml):
-        # Извлечение текста из главы
-        chapter_text = item.content.decode('utf-8')
-
-        # Добавление главы в новую книгу
-        new_chapter = epub.EpubHtml(title=item.title, file_name=f'{base_name}_{current_part}.xhtml')
-        new_chapter.content = chapter_text
-        new_book.add_item(new_chapter)
-
-        # Увеличение индекса главы
-        current_chapter += 1
+    # Проход по всем заголовкам глав
+    for current_chapter, chapter_title in enumerate(chapter_titles, start=1):
+        print(f'Обработка главы {current_chapter} с заголовком: {chapter_title}')
 
         # Если достигнуто максимальное количество глав в части, сохраняем книгу и создаем новую
-        if current_chapter % split_size == 0:
+        if current_split_size >= split_size:
+            print(f'Сохранение книги {current_part} с {current_split_size} главами')
             # Сохранение новой книги
             output_file = os.path.join(output_folder, f'{base_name}_{current_part}.epub')
             epub.write_epub(output_file, new_book)
 
-            # Увеличение индекса части и создание новой книги
+            # Увеличение индекса части и сброс размера текущей части
             current_part += 1
             new_book = epub.EpubBook()
+            current_split_size = 0
+
+        # Добавление главы в новую книгу
+        new_chapter = epub.EpubHtml(title=chapter_title,
+                                    file_name=f'{base_name}_{current_part}_{current_chapter}.xhtml')
+        new_chapter.content = f'<html><head><title>{chapter_title}</title></head><body><p>Глава {current_chapter} - Содержание</p></body></html>'
+        new_book.add_item(new_chapter)
+
+        # Увеличение размера текущей части
+        current_split_size += 1
 
     # Сохранение последней части, если необходимо
-    if current_chapter % split_size != 0:
+    if current_split_size > 0:
+        print(f'Сохранение последней книги {current_part} с {current_split_size} главами')
         output_file = os.path.join(output_folder, f'{base_name}_{current_part}.epub')
         epub.write_epub(output_file, new_book)
 
     print(f'Книга разделена на {current_part} частей.')
 
 
-# Получение папки, в которой находится программа
-folder_path = os.path.dirname(os.path.abspath(__file__))
 
-# Получение списка файлов .epub в папке
-epub_files = list_epub_files(folder_path)
+if __name__ == "__main__":
+    # Получение папки, в которой находится программа
+    folder_path = os.path.dirname(os.path.abspath(__file__))
 
-if not epub_files:
-    print('В текущей папке нет файлов формата .epub.')
-else:
-    print('Доступные файлы для разделения:')
-    for i, file in enumerate(epub_files, 1):
-        print(f'{i}. {file}')
+    # Получение списка файлов .epub в папке
+    epub_files = list_epub_files(folder_path)
 
-    # Получение выбора пользователя
-    choice = int(input('Введите номер файла для разделения: '))
+    if not epub_files:
+        print('В текущей папке нет файлов формата .epub.')
+    else:
+        print('Доступные файлы для разделения:')
+        for i, file in enumerate(epub_files, 1):
+            print(f'{i}. {file}')
 
-    # Вывод содержания или заголовков глав выбранной книги
-    selected_file = epub_files[choice - 1]
-    file_path = os.path.join(folder_path, selected_file)
+        # Получение выбора пользователя
+        # choice = int(input('Введите номер файла для разделения: '))
+        choice = 1
+        print("Введите номер файла для разделения: 1")
 
-
-    # Пример использования
-    titles = print_book_content(file_path)
-
-    # Вывод заголовков глав
-    for title in titles:
-        print(f' - {title}')
-
-    # Получение ввода пользователя для количества глав в одной части
-    split_size = int(input('Введите количество глав в одной части: '))
-
-    # Проверка корректности выбора пользователя
-    if 1 <= choice <= len(epub_files):
-        selected_file = epub_files[choice - 1]
+        # Вывод содержания или заголовков глав выбранной книги
+        # selected_file = epub_files[choice - 1]
+        selected_file = epub_files[0]
         file_path = os.path.join(folder_path, selected_file)
 
-        # Пример использования
-        split_epub(file_path, split_size)
-    else:
-        print('Некорректный выбор файла.')
+        # Проверка сколько в книге глав
+        # titles = print_book_content(file_path)
+        # print(f'В книге {len(titles)} заголовков глав.')
+
+        # Получение ввода пользователя для количества глав в одной части
+        # split_size = int(input('Введите количество глав в одной части: '))
+        print("Введите количество глав в одной части: 100")
+        split_size = 100
+
+        # Проверка корректности выбора пользователя
+        if 1 <= choice <= len(epub_files):
+            selected_file = epub_files[choice - 1]
+            file_path = os.path.join(folder_path, selected_file)
+
+            # Пример использования
+            split_epub(file_path, split_size)
+        else:
+            print('Некорректный выбор файла.')
