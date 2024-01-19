@@ -5,12 +5,22 @@ import zipfile
 
 
 def list_epub_files(folder_path):
+    """
+    Поиск файлов в папке
+    :param folder_path:
+    :return:
+    """
     # Получение списка файлов формата .epub в указанной папке
     epub_files = [file for file in os.listdir(folder_path) if file.endswith('.epub')]
     return epub_files
 
 
 def print_book_content(file_path):
+    """
+    Извлечение заголовков книги
+    :param file_path:
+    :return:
+    """
     chapter_titles = []
 
     with zipfile.ZipFile(file_path, 'r') as zip_file:
@@ -53,7 +63,7 @@ def split_epub(input_file, split_size):
 
     # Проход по всем заголовкам глав
     for current_chapter, chapter_title in enumerate(chapter_titles, start=1):
-        print(f'Обработка главы {current_chapter} с заголовком: {chapter_title}')
+        # print(f'Обработка главы {current_chapter} с заголовком: {chapter_title}')
 
         # Если достигнуто максимальное количество глав в части, сохраняем книгу и создаем новую
         if current_split_size >= split_size:
@@ -70,7 +80,8 @@ def split_epub(input_file, split_size):
         # Добавление главы в новую книгу
         new_chapter = epub.EpubHtml(title=chapter_title,
                                     file_name=f'{base_name}_{current_part}_{current_chapter}.xhtml')
-        new_chapter.content = f'<html><head><title>{chapter_title}</title></head><body><p>Глава {current_chapter} - Содержание</p></body></html>'
+        # new_chapter.content = f'<html><head><title>{chapter_title}</title></head><body><p>Глава {current_chapter} - Содержание</p></body></html>'
+
         new_book.add_item(new_chapter)
 
         # Увеличение размера текущей части
@@ -83,7 +94,6 @@ def split_epub(input_file, split_size):
         epub.write_epub(output_file, new_book)
 
     print(f'Книга разделена на {current_part} частей.')
-
 
 
 if __name__ == "__main__":
@@ -110,10 +120,6 @@ if __name__ == "__main__":
         selected_file = epub_files[0]
         file_path = os.path.join(folder_path, selected_file)
 
-        # Проверка сколько в книге глав
-        # titles = print_book_content(file_path)
-        # print(f'В книге {len(titles)} заголовков глав.')
-
         # Получение ввода пользователя для количества глав в одной части
         # split_size = int(input('Введите количество глав в одной части: '))
         print("Введите количество глав в одной части: 100")
@@ -124,7 +130,6 @@ if __name__ == "__main__":
             selected_file = epub_files[choice - 1]
             file_path = os.path.join(folder_path, selected_file)
 
-            # Пример использования
             split_epub(file_path, split_size)
         else:
             print('Некорректный выбор файла.')
